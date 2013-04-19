@@ -57,6 +57,7 @@ public class MainActivity extends AndroidApplication implements Multiplayable, L
 	protected void onStart() {
 		super.onStart();
 		controller.bindServiceTo(this);
+		lounge.setMatchId(getIntent().getStringExtra(LoungeConstants.EXTRA_MATCH_ID));
 	}
 
 	@Override

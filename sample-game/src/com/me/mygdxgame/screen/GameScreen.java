@@ -2,8 +2,7 @@ package com.me.mygdxgame.screen;
 
 import java.util.ArrayList;
 import java.util.List;
-
-import andlabs.lounge.LoungeGameController;
+import java.util.Random;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input.Keys;
@@ -17,17 +16,27 @@ import com.me.mygdxgame.LoungeBundle;
 import com.me.mygdxgame.LoungeReceiver;
 import com.me.mygdxgame.entity.Bullet;
 import com.me.mygdxgame.entity.Player;
+import com.me.mygdxgame.entity.RemotePlayer;
 
 public class GameScreen implements Screen, InputProcessor, LoungeReceiver {
 	
-	private Player player = new Player();
+	private Random random = new Random();
+	private Player player;
 	private List<Bullet> bullets = new ArrayList<Bullet>();
-	private List<Player> remotePlayers = new ArrayList<Player>();
+	private List<RemotePlayer> remotePlayers = new ArrayList<RemotePlayer>();
 	private SpriteBatch batch = new SpriteBatch();
 	
 	@Override
 	public void show() {
 		Gdx.input.setInputProcessor(this);
+		int x = random.nextInt(20 + Game.width - 80);
+		int y = random.nextInt(20 + Game.height - 80);
+		player = new Player(x, y);
+		LoungeBundle b = new LoungeBundle();
+		b.put("x", x);
+		b.put("y", y);
+		b.put("rotation", 0);
+		Game.lounge.sendGameMessage(b);
 	}
 	
 	private void update(float delta) {
@@ -44,12 +53,18 @@ public class GameScreen implements Screen, InputProcessor, LoungeReceiver {
 			player.setX(player.getX() + 200 * delta);
 		}
 		player.update(this, delta);
-		for (Player p : remotePlayers) {
+		for (RemotePlayer p : remotePlayers) {
 			p.update(this, delta);
 		}
 		for (Bullet b : bullets) {
 			b.update(this, delta);
 		}
+		
+		LoungeBundle b = new LoungeBundle();
+		b.put("x", player.getX());
+		b.put("y", player.getY());
+		b.put("rotation", player.getRotation());
+		Game.lounge.sendGameMessage(b);
 	}
 
 	@Override
@@ -61,7 +76,7 @@ public class GameScreen implements Screen, InputProcessor, LoungeReceiver {
 		
 		batch.begin();
 		player.draw(batch);
-		for (Player p : remotePlayers) {
+		for (RemotePlayer p : remotePlayers) {
 			p.draw(batch);
 		}
 		for (Bullet b : bullets) {
@@ -153,28 +168,41 @@ public class GameScreen implements Screen, InputProcessor, LoungeReceiver {
 		return bullets;
 	}
 
-	public List<Player> getRemotePlayers() {
+	public List<RemotePlayer> getRemotePlayers() {
 		return remotePlayers;
 	}
 
 	@Override
 	public void onCheckIn(String player) {
-		System.out.println(player + " checked in");
+		Gdx.app.log("", player + " checked in");
+		remotePlayers.add(new RemotePlayer(player));
 	}
 
 	@Override
 	public void onCheckOut(String player) {
-		System.out.println(player + " checked out");
+		Gdx.app.log("", player + " checked out");
 	}
 
 	@Override
 	public void onAllPlayerCheckedIn() {
-		System.out.println("all checked in");
+		Gdx.app.log("", "all checked in");
 	}
 
 	@Override
 	public void onGameMessage(LoungeBundle payload) {
-		System.out.println("message received");
+		Gdx.app.log("", "message received");
+		if (payload.get("player") != null) {
+			int x = (Integer) payload.get("x");
+			int y = (Integer) payload.get("y");
+			int degrees = (Integer) payload.get("rotation");
+			for (RemotePlayer p : remotePlayers) {
+				if (p.getName().equals(payload.get("player"))) {
+					p.setX(x);
+					p.setY(y);
+					p.setRotation(degrees);
+				}
+			}
+		}
 	}
 
 }
