@@ -2,34 +2,28 @@ package com.me.mygdxgame.screen;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
+
+import andlabs.lounge.LoungeGameController;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input.Keys;
 import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.GL20;
-import com.badlogic.gdx.graphics.Texture;
-import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Vector2;
 import com.me.mygdxgame.Game;
-import com.me.mygdxgame.entity.Enemy;
+import com.me.mygdxgame.LoungeBundle;
+import com.me.mygdxgame.LoungeReceiver;
+import com.me.mygdxgame.entity.Bullet;
 import com.me.mygdxgame.entity.Player;
-import com.me.mygdxgame.entity.Powerup;
 
-public class GameScreen implements Screen, InputProcessor {
+public class GameScreen implements Screen, InputProcessor, LoungeReceiver {
 	
 	private Player player = new Player();
-	private List<Enemy> enemies = new ArrayList<Enemy>();
+	private List<Bullet> bullets = new ArrayList<Bullet>();
+	private List<Player> remotePlayers = new ArrayList<Player>();
 	private SpriteBatch batch = new SpriteBatch();
-	private List<Powerup> powerups = new ArrayList<Powerup>();
-	private Random rand = new Random();
-	private long nextSpawnTime = System.currentTimeMillis();
-	private boolean gameOver = false;
-	private BitmapFont font = new BitmapFont();
-	private long runtime = 0;
-	private long startTime = System.currentTimeMillis();
-	private Texture gameOverTexture = new Texture("data/game_over.png");
 	
 	@Override
 	public void show() {
@@ -37,53 +31,42 @@ public class GameScreen implements Screen, InputProcessor {
 	}
 	
 	private void update(float delta) {
-		runtime = (System.currentTimeMillis() - startTime) / 1000;
+		if (Gdx.input.isKeyPressed(Keys.W) || Gdx.input.isKeyPressed(Keys.UP)) {
+			player.setY(player.getY() + 200 * delta);
+		}
+		if (Gdx.input.isKeyPressed(Keys.A) || Gdx.input.isKeyPressed(Keys.LEFT)) {
+			player.setX(player.getX() - 200 * delta);
+		}
+		if (Gdx.input.isKeyPressed(Keys.S) || Gdx.input.isKeyPressed(Keys.DOWN)) {
+			player.setY(player.getY() - 200 * delta);
+		}
+		if (Gdx.input.isKeyPressed(Keys.D) || Gdx.input.isKeyPressed(Keys.RIGHT)) {
+			player.setX(player.getX() + 200 * delta);
+		}
 		player.update(this, delta);
-		
-		for (int i = 0; i < enemies.size(); i++) {
-			if (enemies.get(i) != null) {
-				enemies.get(i).update(this, delta);
-			}
+		for (Player p : remotePlayers) {
+			p.update(this, delta);
 		}
-		
-		for (int i = 0; i < powerups.size(); i++) {
-			if (powerups.get(i) != null) {
-				powerups.get(i).update(this, delta);
-			}
-		}
-		
-		if (rand.nextInt(75) == 5) {
-			powerups.add(new Powerup(rand.nextInt(Game.width), rand.nextInt(Game.height)));
-		}
-		
-		if (System.currentTimeMillis() - nextSpawnTime >= 0) {
-			enemies.add(new Enemy(rand.nextInt(Game.width - 32), rand.nextInt(Game.height - 32)));
-			nextSpawnTime = System.currentTimeMillis() + 5000;
+		for (Bullet b : bullets) {
+			b.update(this, delta);
 		}
 	}
 
 	@Override
 	public void render(float delta) {
-		if (!gameOver) {
-			update(delta);
-		}
+		update(delta);
 
-		Gdx.gl.glClearColor(1f, 1f, 1f, 1f);
+		Gdx.gl.glClearColor(0f, 0f, 0f, 0f);
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 		
 		batch.begin();
-		for (Powerup p : powerups) {
-			batch.draw(p.getTexture(), p.getX(), p.getY());
+		player.draw(batch);
+		for (Player p : remotePlayers) {
+			p.draw(batch);
 		}
-		batch.draw(player.getTexture(), player.getX(), player.getY());
-		for (Enemy e : enemies) {
-			batch.draw(e.getTexture(), e.getX(), e.getY());
+		for (Bullet b : bullets) {
+			b.draw(batch);
 		}
-		if (gameOver) {
-			batch.draw(gameOverTexture, Game.width / 2 - gameOverTexture.getWidth() / 2, Game.height / 2 - gameOverTexture.getHeight() / 2);
-		}
-		font.draw(batch, "Runtime: " + runtime, 25, 25);
-		font.draw(batch, "Speed: " + (player.getSpeed() / player.getMaxSpeed()) + "x", 25, 45);
 		batch.end();
 	}
 
@@ -129,8 +112,12 @@ public class GameScreen implements Screen, InputProcessor {
 
 	@Override
 	public boolean touchDown(int x, int y, int pointer, int button) {
+		y = Game.height - y;
 		Vector2 vec = new Vector2(x, y).sub(player.getX(), player.getY()).nor();
-		player.setVelocity(vec);
+		Bullet bullet = new Bullet((int) player.getX(), (int) player.getY());
+		bullet.setVelocity(vec);
+		bullet.setRotation(vec.angle() - 180);
+		bullets.add(bullet);
 		return true;
 	}
 
@@ -144,6 +131,7 @@ public class GameScreen implements Screen, InputProcessor {
 		y = Game.height - y;
 		Vector2 vec = new Vector2(x, y).sub(player.getX(), player.getY()).nor();
 		player.setVelocity(vec);
+		player.setRotation(vec.angle() - 180);
 		return true;
 	}
 
@@ -161,20 +149,32 @@ public class GameScreen implements Screen, InputProcessor {
 		return player;
 	}
 
-	public List<Enemy> getEnemies() {
-		return enemies;
-	}
-	
-	public List<Powerup> getPowerups() {
-		return powerups;
+	public List<Bullet> getBullets() {
+		return bullets;
 	}
 
-	public boolean isGameOver() {
-		return gameOver;
+	public List<Player> getRemotePlayers() {
+		return remotePlayers;
 	}
 
-	public void setGameOver(boolean gameOver) {
-		this.gameOver = gameOver;
+	@Override
+	public void onCheckIn(String player) {
+		System.out.println(player + " checked in");
+	}
+
+	@Override
+	public void onCheckOut(String player) {
+		System.out.println(player + " checked out");
+	}
+
+	@Override
+	public void onAllPlayerCheckedIn() {
+		System.out.println("all checked in");
+	}
+
+	@Override
+	public void onGameMessage(LoungeBundle payload) {
+		System.out.println("message received");
 	}
 
 }
