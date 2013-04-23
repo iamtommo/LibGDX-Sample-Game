@@ -25,18 +25,15 @@ public class GameScreen implements Screen, InputProcessor, LoungeReceiver {
 	private List<Bullet> bullets = new ArrayList<Bullet>();
 	private List<RemotePlayer> remotePlayers = new ArrayList<RemotePlayer>();
 	private SpriteBatch batch = new SpriteBatch();
+	private long lastDispatchTime = -1;
 	
 	@Override
 	public void show() {
 		Gdx.input.setInputProcessor(this);
-		int x = random.nextInt(20 + Game.width - 80);
-		int y = random.nextInt(20 + Game.height - 80);
+		int x = random.nextInt(100 + random.nextInt(100));
+		int y = random.nextInt(100 + random.nextInt(100));
 		player = new Player(x, y);
-		LoungeBundle b = new LoungeBundle();
-		b.put("x", x);
-		b.put("y", y);
-		b.put("rotation", 0);
-		Game.lounge.sendGameMessage(b);
+		sendPlayerUpdate();
 	}
 	
 	private void update(float delta) {
@@ -60,11 +57,9 @@ public class GameScreen implements Screen, InputProcessor, LoungeReceiver {
 			b.update(this, delta);
 		}
 		
-		LoungeBundle b = new LoungeBundle();
-		b.put("x", player.getX());
-		b.put("y", player.getY());
-		b.put("rotation", player.getRotation());
-		Game.lounge.sendGameMessage(b);
+		if (System.currentTimeMillis() - lastDispatchTime >= 1000) {
+			sendPlayerUpdate();
+		}
 	}
 
 	@Override
@@ -192,9 +187,9 @@ public class GameScreen implements Screen, InputProcessor, LoungeReceiver {
 	public void onGameMessage(LoungeBundle payload) {
 		Gdx.app.log("", "message received");
 		if (payload.get("player") != null) {
-			int x = (Integer) payload.get("x");
-			int y = (Integer) payload.get("y");
-			int degrees = (Integer) payload.get("rotation");
+			int x = Integer.parseInt(payload.get("x"));
+			int y = Integer.parseInt(payload.get("y"));
+			int degrees = Integer.parseInt(payload.get("rotation"));
 			for (RemotePlayer p : remotePlayers) {
 				if (p.getName().equals(payload.get("player"))) {
 					p.setX(x);
@@ -203,6 +198,15 @@ public class GameScreen implements Screen, InputProcessor, LoungeReceiver {
 				}
 			}
 		}
+	}
+	
+	public void sendPlayerUpdate() {
+		LoungeBundle b = new LoungeBundle();
+		b.put("player", "myplayer");
+		b.put("x", Integer.toString((int) player.getX()));
+		b.put("y", Integer.toString((int) player.getY()));
+		b.put("rotation", Integer.toString((int) player.getRotation()));
+		Game.lounge.sendGameMessage(b);
 	}
 
 }

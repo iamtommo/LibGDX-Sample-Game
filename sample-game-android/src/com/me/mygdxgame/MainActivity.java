@@ -1,17 +1,19 @@
 package com.me.mygdxgame;
 
+import java.util.Map;
+
 import andlabs.lounge.LoungeGameCallback;
 import andlabs.lounge.LoungeGameController;
 import andlabs.lounge.Multiplayable;
 import andlabs.lounge.lobby.LoungeConstants;
 import android.os.Bundle;
+import android.util.Log;
 
-import com.me.mygdxgame.LoungeInstance;
 import com.badlogic.gdx.ApplicationListener;
 import com.badlogic.gdx.backends.android.AndroidApplication;
 import com.badlogic.gdx.backends.android.AndroidApplicationConfiguration;
 
-public class MainActivity extends AndroidApplication implements Multiplayable, LoungeGameCallback {
+public class MainActivity extends AndroidApplication implements Multiplayable, LoungeGameCallback, LoungeBundleInterceptor {
 	
 	private LoungeInstance lounge;
 	private LoungeGameController controller = new LoungeGameController();
@@ -31,11 +33,13 @@ public class MainActivity extends AndroidApplication implements Multiplayable, L
 
 	@Override
 	public void onCheckIn(String player) {
+		Log.i("TOMMO", "checked in: " + player); 
 		lounge.onCheckIn(player);
 	}
 
 	@Override
 	public void onAllPlayerCheckedIn() {
+		Log.i("TOMMO", "all checked in!"); 
 		lounge.onAllPlayerCheckedIn();
 	}
 
@@ -43,13 +47,15 @@ public class MainActivity extends AndroidApplication implements Multiplayable, L
 	public void onGameMessage(Bundle msg) {
 		LoungeBundle lb = new LoungeBundle();
 		for (String key : msg.keySet()) {
-			lb.put(key, msg.get(key));
+			lb.put(key, msg.getString(key));
 		}
+		Log.i("TOMMO", "received msg"); 
 		lounge.onGameMessage(lb);
 	}
 
 	@Override
 	public void onCheckOut(String player) {
+		Log.i("TOMMO", "checked out: " + player); 
 		lounge.onCheckOut(player);
 	}
 	
@@ -58,6 +64,7 @@ public class MainActivity extends AndroidApplication implements Multiplayable, L
 		super.onStart();
 		controller.bindServiceTo(this);
 		lounge.setMatchId(getIntent().getStringExtra(LoungeConstants.EXTRA_MATCH_ID));
+		lounge.setInterceptor(this);
 	}
 
 	@Override
@@ -77,6 +84,15 @@ public class MainActivity extends AndroidApplication implements Multiplayable, L
 	public void onStop() {
 		controller.unbindServiceFrom(this);
 		super.onStop();
+	}
+
+	@Override
+	public void receive(LoungeBundle bundle) {
+		Bundle b = new Bundle();
+		for (Map.Entry<String, String> entry : bundle.entrySet()) {
+			b.putString(entry.getKey(), entry.getValue());
+		}
+		controller.sendGameMove(lounge.getMatchId(), b);
 	}
     
 }
