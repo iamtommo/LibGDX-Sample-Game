@@ -9,8 +9,8 @@ import com.badlogic.gdx.Input.Keys;
 import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.GL20;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.me.mygdxgame.Game;
 import com.me.mygdxgame.LoungeBundle;
 import com.me.mygdxgame.LoungeReceiver;
@@ -20,11 +20,11 @@ import com.me.mygdxgame.entity.RemotePlayer;
 
 public class GameScreen implements Screen, InputProcessor, LoungeReceiver {
 	
+	private Stage stage = new Stage(800, 480, false);
 	private Random random = new Random();
 	private Player player;
 	private List<Bullet> bullets = new ArrayList<Bullet>();
 	private List<RemotePlayer> remotePlayers = new ArrayList<RemotePlayer>();
-	private SpriteBatch batch = new SpriteBatch();
 	private long lastDispatchTime = -1;
 	
 	@Override
@@ -69,15 +69,15 @@ public class GameScreen implements Screen, InputProcessor, LoungeReceiver {
 		Gdx.gl.glClearColor(0f, 0f, 0f, 0f);
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 		
-		batch.begin();
-		player.draw(batch);
+		stage.getSpriteBatch().begin();
+		player.draw(stage.getSpriteBatch());
 		for (RemotePlayer p : remotePlayers) {
-			p.draw(batch);
+			p.draw(stage.getSpriteBatch());
 		}
 		for (Bullet b : bullets) {
-			b.draw(batch);
+			b.draw(stage.getSpriteBatch());
 		}
-		batch.end();
+		stage.getSpriteBatch().end();
 	}
 
 	@Override
@@ -169,23 +169,27 @@ public class GameScreen implements Screen, InputProcessor, LoungeReceiver {
 
 	@Override
 	public void onCheckIn(String player) {
-		Gdx.app.log("", player + " checked in");
-		remotePlayers.add(new RemotePlayer(player));
+		Gdx.app.log("TOMMO", player + " checked in");
+		if (this.player.getName() == null) {
+			this.player.setName(player);
+		} else {
+			remotePlayers.add(new RemotePlayer(player));
+		}
 	}
 
 	@Override
 	public void onCheckOut(String player) {
-		Gdx.app.log("", player + " checked out");
+		Gdx.app.log("TOMMO", player + " checked out");
 	}
 
 	@Override
 	public void onAllPlayerCheckedIn() {
-		Gdx.app.log("", "all checked in");
+		Gdx.app.log("TOMMO", "all checked in");
 	}
 
 	@Override
 	public void onGameMessage(LoungeBundle payload) {
-		Gdx.app.log("", "message received");
+		Gdx.app.log("TOMMO", "message received");
 		if (payload.get("player") != null) {
 			int x = Integer.parseInt(payload.get("x"));
 			int y = Integer.parseInt(payload.get("y"));
@@ -202,7 +206,7 @@ public class GameScreen implements Screen, InputProcessor, LoungeReceiver {
 	
 	public void sendPlayerUpdate() {
 		LoungeBundle b = new LoungeBundle();
-		b.put("player", "myplayer");
+		b.put("player", player.getName());
 		b.put("x", Integer.toString((int) player.getX()));
 		b.put("y", Integer.toString((int) player.getY()));
 		b.put("rotation", Integer.toString((int) player.getRotation()));

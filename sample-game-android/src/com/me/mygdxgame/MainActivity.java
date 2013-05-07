@@ -49,7 +49,7 @@ public class MainActivity extends AndroidApplication implements Multiplayable, L
 		for (String key : msg.keySet()) {
 			lb.put(key, msg.getString(key));
 		}
-		Log.i("TOMMO", "received msg"); 
+		Log.i("TOMMO", "received msgc"); 
 		lounge.onGameMessage(lb);
 	}
 
@@ -63,6 +63,7 @@ public class MainActivity extends AndroidApplication implements Multiplayable, L
 	protected void onStart() {
 		super.onStart();
 		controller.bindServiceTo(this);
+		controller.registerCallback(this);
 		lounge.setMatchId(getIntent().getStringExtra(LoungeConstants.EXTRA_MATCH_ID));
 		lounge.setInterceptor(this);
 	}
